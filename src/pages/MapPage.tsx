@@ -95,6 +95,7 @@ export const MapPage: React.FC = () => {
     map,
     addPin,
     removePin,
+    updatePin,
     selectPin,
     logout,
   } = useAppStore();
@@ -110,32 +111,33 @@ export const MapPage: React.FC = () => {
     setIsAddingPin(true);
     
     try {
-      // Get address first before adding pin
-      const address = await reverseGeocode(lat, lng);
+      // Generate ID beforehand
+      const pinId = Date.now().toString();
       
-      // Add pin with address directly
+      // Add pin immediately with coordinates
       const pinData = {
         latitude: lat,
         longitude: lng,
-        address: address || 'Address not found',
+        address: 'Loading address...',
       };
       
-      addPin(pinData);
+      const returnedId = addPin(pinData, pinId);
+
+      // Get address in background and update pin
+      try {
+        const address = await reverseGeocode(lat, lng);
+        updatePin(returnedId, { address: address || 'Address not found' });
+      } catch (geocodeError) {
+        console.error('Geocoding failed:', geocodeError);
+        updatePin(returnedId, { address: 'Address not found' });
+      }
       
     } catch (error) {
       console.error('Error adding pin:', error);
-      // Add pin without address if geocoding fails
-      const pinData = {
-        latitude: lat,
-        longitude: lng,
-        address: 'Address not found',
-      };
-      
-      addPin(pinData);
     } finally {
       setIsAddingPin(false);
     }
-  }, [addPin, isAddingPin, reverseGeocode]);
+  }, [addPin, updatePin, isAddingPin, reverseGeocode]);
 
   const handleRemovePin = useCallback((pinId: string) => {
     removePin(pinId);

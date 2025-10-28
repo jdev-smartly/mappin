@@ -14,7 +14,7 @@ interface AppState {
   // Actions
   setMapCenter: (center: [number, number]) => void;
   setMapZoom: (zoom: number) => void;
-  addPin: (pin: Omit<Pin, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  addPin: (pin: Omit<Pin, 'id' | 'createdAt' | 'updatedAt'>, customId?: string) => string;
   removePin: (id: string) => void;
   updatePin: (id: string, updates: Partial<Pin>) => void;
   selectPin: (pin: Pin | null) => void;
@@ -68,12 +68,13 @@ export const useAppStore = create<AppState>()(
             'setMapZoom'
           ),
         
-        addPin: (pinData) =>
+        addPin: (pinData, customId) => {
+          const pinId = customId || generateId();
           set(
             (state) => {
               const newPin: Pin = {
                 ...pinData,
-                id: generateId(),
+                id: pinId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               };
@@ -87,7 +88,9 @@ export const useAppStore = create<AppState>()(
             },
             false,
             'addPin'
-          ),
+          );
+          return pinId;
+        },
         
         removePin: (id) =>
           set(

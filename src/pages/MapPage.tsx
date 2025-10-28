@@ -1,0 +1,260 @@
+// Map page component
+import React, { useState, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { Icon } from 'leaflet';
+import { Button } from '@/components/ui';
+import { useAppStore } from '@/store';
+import { useGeocoding } from '@/hooks';
+import { Pin } from '@/types';
+import { formatDate } from '@/utils';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default markers in react-leaflet
+delete (Icon.Default.prototype as any)._getIconUrl;
+Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Convert decimal degrees to DMS format
+const toDMS = (decimal: number, isLatitude: boolean): string => {
+  const absolute = Math.abs(decimal);
+  const degrees = Math.floor(absolute);
+  const minutesFloat = (absolute - degrees) * 60;
+  const minutes = Math.floor(minutesFloat);
+  const seconds = (minutesFloat - minutes) * 60;
+  
+  const direction = isLatitude 
+    ? (decimal >= 0 ? 'N' : 'S')
+    : (decimal >= 0 ? 'E' : 'W');
+  
+  return `${degrees}°${minutes}'${seconds.toFixed(1)}"${direction}`;
+};
+
+// Create custom icon for Leaflet (singleton)
+const customIcon = (() => {
+  const svgString = `
+    <svg width="30" height="44" viewBox="0 0 30 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g filter="url(#filter0_dd_11_1957)">
+        <path d="M3 14C3 7.37258 8.37258 2 15 2C21.6274 2 27 7.37258 27 14C27 20.6274 21.6274 26 15 26C8.37258 26 3 20.6274 3 14Z" fill="#202020"/>
+        <g clip-path="url(#clip0_11_1957)">
+          <path d="M18.9775 17.3525L15 21.3299L11.0225 17.3525C8.82582 15.1558 8.82582 11.5942 11.0225 9.39753C13.2192 7.20082 16.7808 7.20082 18.9775 9.39753C21.1742 11.5942 21.1742 15.1558 18.9775 17.3525ZM15 15.875C16.3807 15.875 17.5 14.7557 17.5 13.375C17.5 11.9943 16.3807 10.875 15 10.875C13.6193 10.875 12.5 11.9943 12.5 13.375C12.5 14.7557 13.6193 15.875 15 15.875ZM15 14.625C14.3096 14.625 13.75 14.0654 13.75 13.375C13.75 12.6846 14.3096 12.125 15 12.125C15.6904 12.125 16.25 12.6846 16.25 13.375C16.25 14.0654 15.6904 14.625 15 14.625Z" fill="white"/>
+        </g>
+        <path d="M13.5 38C13.5 38.8284 14.1716 39.5 15 39.5C15.8284 39.5 16.5 38.8284 16.5 38H13.5ZM15 26H13.5V38H15H16.5V26H15Z" fill="#202020"/>
+      </g>
+      <defs>
+        <filter id="filter0_dd_11_1957" x="0" y="0" width="30" height="43.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+          <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+          <feOffset dy="1"/>
+          <feGaussianBlur stdDeviation="1.5"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
+          <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_11_1957"/>
+          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+          <feOffset dy="1"/>
+          <feGaussianBlur stdDeviation="1"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0"/>
+          <feBlend mode="normal" in2="effect1_dropShadow_11_1957" result="effect2_dropShadow_11_1957"/>
+          <feBlend mode="normal" in="SourceGraphic" in2="effect2_dropShadow_11_1957" result="shape"/>
+        </filter>
+        <clipPath id="clip0_11_1957">
+          <rect width="15" height="15" fill="white" transform="translate(7.5 6.5)"/>
+        </clipPath>
+      </defs>
+    </svg>
+  `;
+  
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  
+  return new Icon({
+    iconUrl: svgUrl,
+    iconSize: [30, 44],
+    iconAnchor: [15, 44],
+    popupAnchor: [0, -44],
+  });
+})();
+
+interface MapEventsProps {
+  onMapClick: (lat: number, lng: number) => void;
+}
+
+const MapEvents: React.FC<MapEventsProps> = ({ onMapClick }) => {
+  useMapEvents({
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      onMapClick(lat, lng);
+    },
+  });
+  return null;
+};
+
+export const MapPage: React.FC = () => {
+  const {
+    map,
+    addPin,
+    removePin,
+    selectPin,
+    logout,
+  } = useAppStore();
+  
+  const pins = map.pins;
+
+  const { reverseGeocode } = useGeocoding();
+  const [isAddingPin, setIsAddingPin] = useState(false);
+
+  const handleMapClick = useCallback(async (lat: number, lng: number) => {
+    if (isAddingPin) return;
+    
+    setIsAddingPin(true);
+    
+    try {
+      // Get address first before adding pin
+      const address = await reverseGeocode(lat, lng);
+      
+      // Add pin with address directly
+      const pinData = {
+        latitude: lat,
+        longitude: lng,
+        address: address || 'Address not found',
+      };
+      
+      addPin(pinData);
+      
+    } catch (error) {
+      console.error('Error adding pin:', error);
+      // Add pin without address if geocoding fails
+      const pinData = {
+        latitude: lat,
+        longitude: lng,
+        address: 'Address not found',
+      };
+      
+      addPin(pinData);
+    } finally {
+      setIsAddingPin(false);
+    }
+  }, [addPin, isAddingPin, reverseGeocode]);
+
+  const handleRemovePin = useCallback((pinId: string) => {
+    removePin(pinId);
+  }, [removePin]);
+
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
+
+  return (
+    <div className="h-screen w-screen relative overflow-hidden">
+      {/* Full Screen Map */}
+      <div className="absolute inset-0 z-0" style={{ width: '100vw', height: '100vh' }}>
+        <MapContainer
+          center={[map.center[0], map.center[1]]}
+          zoom={map.zoom}
+          className="h-full w-full"
+          zoomControl={true}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          <MapEvents onMapClick={handleMapClick} />
+          
+                  {pins.map((pin: Pin) => (
+                    <Marker
+                      key={pin.id}
+                      position={[pin.latitude, pin.longitude]}
+                      icon={customIcon}
+                      eventHandlers={{
+                        click: () => selectPin(pin),
+                      }}
+                    >
+              <Popup>
+                <div className="p-2">
+                  <p className="font-medium text-gray-900">
+                    {pin.address || 'Loading address...'}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Added: {formatDate(new Date(pin.createdAt))}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+
+      {/* Top Header Bar */}
+      <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">Map Pin Board</h1>
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            className="text-gray-600 hover:text-gray-900"
+          >
+            Logout
+          </Button>
+        </div>
+      </div>
+
+      {/* Left Sidebar Overlay */}
+      <div className="absolute top-24 left-6 bottom-6 z-20 w-80">
+            <div className="h-full flex flex-col bg-white rounded-lg">
+            <div className="h-15 border-b border-gray-300 pt-5 pb-3 px-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Pin Lists ({pins.length})
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {pins.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">
+                  No pins yet. Click on the map to add one!
+                </p>
+              ) : (
+                <div>
+                  {pins.map((pin: Pin, index: number) => (
+                    <div
+                      key={pin.id}
+                      className="h-[86px] flex items-center gap-3 hover:bg-gray-50 transition-colors p-3 border-b border-gray-100"
+                    >
+                      {/* Avatar */}
+                      <div className="w-[38px] h-[38px] border rounded-full flex-none flex items-center justify-center bg-[#E9E9EB]/60">
+                        <span className="text-sm font-medium text-blue-500">{index + 1}</span>
+                      </div>
+                      
+                      {/* Middle Content */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {pin.address || 'Loading address...'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
+                        </p>
+                      </div>
+                      
+                      {/* Icon Button */}
+                      <button
+                        onClick={() => handleRemovePin(pin.id)}
+                        className="w-[40px] h-[40px] bg-white border border-[#D8D8DA] rounded-full flex items-center justify-center flex-none hover:bg-gray-50 transition-colors"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z" fill="#F73B3B"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+      </div>
+    </div>
+  );
+};

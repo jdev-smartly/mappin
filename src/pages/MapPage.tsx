@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
-import { Button } from '@/components/ui';
+import { EmptyState } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { useGeocoding } from '@/hooks';
 import { Pin } from '@/types';
@@ -97,7 +97,6 @@ export const MapPage: React.FC = () => {
     removePin,
     updatePin,
     selectPin,
-    logout,
   } = useAppStore();
   
   const pins = map.pins;
@@ -143,9 +142,6 @@ export const MapPage: React.FC = () => {
     removePin(pinId);
   }, [removePin]);
 
-  const handleLogout = useCallback(() => {
-    logout();
-  }, [logout]);
 
   return (
     <div className="h-screen w-screen relative overflow-hidden">
@@ -192,19 +188,15 @@ export const MapPage: React.FC = () => {
         </MapContainer>
       </div>
 
-      {/* Top Header Bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200">
-        <div className="flex items-center justify-between px-6 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Map Pin Board</h1>
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            className="text-gray-600 hover:text-gray-900"
-          >
-            Logout
-          </Button>
+        {/* Top Header Bar */}
+        <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 flex items-center justify-center py-3">
+          <div className="flex items-center gap-2">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 5L9 2L15 5L21.303 2.2987C21.5569 2.18992 21.8508 2.30749 21.9596 2.56131C21.9862 2.62355 22 2.69056 22 2.75827V19L15 22L9 19L2.69696 21.7013C2.44314 21.8101 2.14921 21.6925 2.04043 21.4387C2.01375 21.3765 2 21.3094 2 21.2417V5ZM16 19.3955L20 17.6812V5.03308L16 6.74736V19.3955ZM14 19.2639V6.73607L10 4.73607V17.2639L14 19.2639ZM8 17.2526V4.60451L4 6.31879V18.9669L8 17.2526Z" fill="#202020"/>
+            </svg>
+            <h1 className="text-2xl font-bold text-gray-900">Map Pinboard</h1>
+          </div>
         </div>
-      </div>
 
       {/* Left Sidebar Overlay */}
       <div className="absolute top-24 left-6 bottom-6 z-20 w-80">
@@ -216,9 +208,10 @@ export const MapPage: React.FC = () => {
             </div>
             <div className="flex-1 overflow-y-auto">
               {pins.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">
-                  No pins yet. Click on the map to add one!
-                </p>
+                <EmptyState 
+                  title="No Result Found"
+                  description="Your map pin list will show in here."
+                />
               ) : (
                 <div>
                   {pins.map((pin: Pin, index: number) => (

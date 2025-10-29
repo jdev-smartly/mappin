@@ -28,9 +28,20 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const AppContent: React.FC = () => {
   const { auth } = useAppStore();
+  const [isInitializing, setIsInitializing] = React.useState(true);
 
-  // Show loading spinner while checking authentication
-  if (auth.isLoading) {
+  // Initialize app and check authentication
+  React.useEffect(() => {
+    // Simulate a brief initialization period
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show loading spinner while initializing or checking authentication
+  if (isInitializing || auth.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

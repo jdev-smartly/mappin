@@ -205,6 +205,7 @@ export const MapPage: React.FC = () => {
     removePin,
     updatePin,
     selectPin,
+    clearAllPins,
   } = useAppStore();
   
   const pins = map.pins;
@@ -346,9 +347,20 @@ export const MapPage: React.FC = () => {
       <div className="absolute top-24 left-6 bottom-6 z-20 w-80">
             <div className="h-full flex flex-col bg-white rounded-lg">
             <div className="h-15 border-b border-gray-300 pt-5 pb-3 px-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Pin Lists ({pins.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Pin Lists ({pins.length})
+                </h3>
+                {pins.length > 0 && (
+                  <button
+                    onClick={clearAllPins}
+                    className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                    title="Clear all pins"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto">
               {pins.length === 0 ? (

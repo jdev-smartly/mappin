@@ -1,7 +1,57 @@
 // React Context store for global state management
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { Pin, User, MapState, AuthState } from '@/types';
 import { generateId } from '@/utils';
+
+// localStorage keys for persisting data
+const MAP_STORAGE_KEY = 'wobi:map';
+const AUTH_STORAGE_KEY = 'wobi:auth';
+
+// Helper functions for localStorage
+const saveMapToStorage = (map: MapState) => {
+  try {
+    const mapData = {
+      center: map.center,
+      zoom: map.zoom,
+      pins: map.pins,
+    };
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(mapData));
+  } catch (error) {
+    console.error('Failed to save map to localStorage:', error);
+  }
+};
+
+const loadMapFromStorage = (): Partial<MapState> => {
+  try {
+    const stored = localStorage.getItem(MAP_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (error) {
+    console.error('Failed to load map from localStorage:', error);
+    return {};
+  }
+};
+
+const saveAuthToStorage = (auth: AuthState) => {
+  try {
+    const authData = {
+      user: auth.user,
+      isAuthenticated: auth.isAuthenticated,
+    };
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+  } catch (error) {
+    console.error('Failed to save auth to localStorage:', error);
+  }
+};
+
+const loadAuthFromStorage = (): Partial<AuthState> => {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (error) {
+    console.error('Failed to load auth from localStorage:', error);
+    return {};
+  }
+};
 
 interface AppState {
   // Map state
@@ -17,6 +67,7 @@ interface AppState {
   removePin: (id: string) => void;
   updatePin: (id: string, updates: Partial<Pin>) => void;
   selectPin: (pin: Pin | null) => void;
+  clearAllPins: () => void;
   setMapLoading: (loading: boolean) => void;
   setMapError: (error: string | null) => void;
   
@@ -34,23 +85,39 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  // Map state
-  const [map, setMap] = useState<MapState>({
-    center: [51.505, -0.09],
-    zoom: 13,
-    pins: [],
-    selectedPin: null,
-    isLoading: false,
-    error: null,
+  // Initialize map state from localStorage or defaults
+  const [map, setMap] = useState<MapState>(() => {
+    const storedMap = loadMapFromStorage();
+    return {
+      center: storedMap.center || [51.505, -0.09],
+      zoom: storedMap.zoom || 13,
+      pins: storedMap.pins || [],
+      selectedPin: null,
+      isLoading: false,
+      error: null,
+    };
   });
   
   // Auth state
-  const [auth, setAuth] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    error: null,
+  const [auth, setAuth] = useState<AuthState>(() => {
+    const storedAuth = loadAuthFromStorage();
+    return {
+      user: storedAuth.user || null,
+      isAuthenticated: storedAuth.isAuthenticated || false,
+      isLoading: false,
+      error: null,
+    };
   });
+
+  // Save map state to localStorage whenever it changes
+  useEffect(() => {
+    saveMapToStorage(map);
+  }, [map]);
+
+  // Save auth state to localStorage whenever it changes
+  useEffect(() => {
+    saveAuthToStorage(auth);
+  }, [auth]);
 
   // Map actions
   const setMapCenter = useCallback((center: [number, number]) => {
@@ -99,6 +166,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const selectPin = useCallback((pin: Pin | null) => {
     setMap(prev => ({ ...prev, selectedPin: pin }));
+  }, []);
+
+  const clearAllPins = useCallback(() => {
+    setMap(prev => ({ ...prev, pins: [], selectedPin: null }));
+    // Also clear localStorage
+    try {
+      localStorage.removeItem(MAP_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear localStorage:', error);
+    }
   }, []);
 
   const setMapLoading = useCallback((isLoading: boolean) => {
@@ -157,6 +234,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       isAuthenticated: false,
       error: null,
     }));
+    // Clear auth from localStorage
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   const setAuthLoading = useCallback((isLoading: boolean) => {
@@ -176,6 +255,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     removePin,
     updatePin,
     selectPin,
+    clearAllPins,
     setMapLoading,
     setMapError,
     login,

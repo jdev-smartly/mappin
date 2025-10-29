@@ -24,6 +24,8 @@ interface AnimatedPinListItemProps {
   onRemove: (pinId: string) => void;
   onMouseEnter: (pin: Pin) => void;
   onMouseLeave: () => void;
+  onSelect?: (pin: Pin) => void;
+  isSelected?: boolean;
   isNewPin?: boolean;
 }
 
@@ -33,6 +35,8 @@ export const AnimatedPinListItem: React.FC<AnimatedPinListItemProps> = ({
   onRemove,
   onMouseEnter,
   onMouseLeave,
+  onSelect,
+  isSelected = false,
   isNewPin = false,
 }) => {
   return (
@@ -60,9 +64,12 @@ export const AnimatedPinListItem: React.FC<AnimatedPinListItemProps> = ({
       className="overflow-hidden border-b border-gray-100 dark:border-gray-700"
     >
       <motion.div
-        className="h-[86px] flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-3"
+        className={`h-[86px] flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-3 cursor-pointer ${
+          isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+        }`}
         onMouseEnter={() => onMouseEnter(pin)}
         onMouseLeave={onMouseLeave}
+        onClick={() => onSelect?.(pin)}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         transition={{ duration: 0.1 }}

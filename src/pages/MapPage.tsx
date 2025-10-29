@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, useMapEvents, useMap, Marker, Popup } from 're
 import { Icon } from 'leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store';
-import { useGeocoding } from '@/hooks';
+import { geocodingService } from '@/services';
 import { Pin } from '@/types';
 // Removed AnimatedPinMarker import
 import { AnimatedPinListItem } from '@/components/AnimatedPinListItem';
@@ -197,13 +197,16 @@ export const MapPage: React.FC = () => {
     logout,
   } = useAppStore();
   
+  const selectedPin = map.selectedPin;
+  
   const pins = map.pins;
 
-  const { reverseGeocode } = useGeocoding();
+  // Use geocoding service directly instead of hook
   const [isAddingPin, setIsAddingPin] = useState(false);
   const [hoveredPin, setHoveredPin] = useState<Pin | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
   const [newPinId, setNewPinId] = useState<string | null>(null);
+  const [isSelectedFromList, setIsSelectedFromList] = useState(false);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (isAddingPin) return;
@@ -226,7 +229,7 @@ export const MapPage: React.FC = () => {
 
       // Get address in background and update pin
       try {
-        const address = await reverseGeocode(lat, lng);
+        const address = await geocodingService.reverseGeocode(lat, lng);
         updatePin(returnedId, { address: address || 'Address not found' });
       } catch (geocodeError) {
         console.error('Geocoding failed:', geocodeError);
@@ -240,7 +243,7 @@ export const MapPage: React.FC = () => {
       // Clear new pin flag after animation completes
       setTimeout(() => setNewPinId(null), 300);
     }
-  }, [addPin, updatePin, isAddingPin, reverseGeocode]);
+  }, [addPin, updatePin, isAddingPin]);
 
   const handleRemovePin = useCallback((pinId: string) => {
     // Clear hovered pin if it's the one being removed
@@ -253,6 +256,11 @@ export const MapPage: React.FC = () => {
   const handleTooltipPositionUpdate = useCallback((position: { x: number; y: number } | null) => {
     setTooltipPosition(position);
   }, []);
+
+  const handlePinSelect = useCallback((pin: Pin) => {
+    selectPin(pin);
+    setIsSelectedFromList(true);
+  }, [selectPin]);
 
   // Handle pin drag end
   const handlePinDragEnd = useCallback(async (pinId: string, e: any) => {
@@ -267,13 +275,13 @@ export const MapPage: React.FC = () => {
 
     // Reverse geocode the new location
     try {
-      const address = await reverseGeocode(lat, lng);
+      const address = await geocodingService.reverseGeocode(lat, lng);
       updatePin(pinId, { address: address || 'Address not found' });
     } catch (error) {
       console.error('Geocoding failed for dragged pin:', error);
       updatePin(pinId, { address: 'Address not found' });
     }
-  }, [updatePin, reverseGeocode]);
+  }, [updatePin]);
 
   return (
     <div className="h-screen w-screen relative overflow-hidden">
@@ -303,8 +311,12 @@ export const MapPage: React.FC = () => {
               position={[pin.latitude, pin.longitude]}
               icon={createPinIcon()}
               draggable={true}
+              opacity={selectedPin && isSelectedFromList ? (selectedPin.id === pin.id ? 1 : 0.3) : 1}
               eventHandlers={{
-                click: () => selectPin(pin),
+                click: () => {
+                  selectPin(pin);
+                  setIsSelectedFromList(false);
+                },
                 dragend: (e) => handlePinDragEnd(pin.id, e),
               }}
             >
@@ -325,7 +337,7 @@ export const MapPage: React.FC = () => {
 
         {/* Top Header Bar */}
         <motion.div 
-          className="absolute top-0 left-0 right-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between py-3 px-6"
+          className="absolute top-0 left-0 right-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between py-3 px-6 h-[46px] lg:h-auto lg:py-3"
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -356,12 +368,12 @@ export const MapPage: React.FC = () => {
 
       {/* Left Sidebar Overlay */}
       <motion.div 
-        className="absolute top-24 left-6 bottom-6 z-20 w-80"
+        className="absolute left-[24px] bottom-0 z-20 w-[360px] h-[344px] lg:top-24 lg:left-6 lg:bottom-6 lg:w-80 lg:h-auto"
         initial={{ x: -320, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-            <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-lg">
+            <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-t-[10px] rounded-b-none lg:rounded-lg">
             <div className="h-15 border-b border-gray-300 dark:border-gray-600 pt-5 pb-3 px-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -397,6 +409,8 @@ export const MapPage: React.FC = () => {
                       onRemove={handleRemovePin}
                       onMouseEnter={setHoveredPin}
                       onMouseLeave={() => setHoveredPin(null)}
+                      onSelect={handlePinSelect}
+                      isSelected={selectedPin?.id === pin.id}
                       isNewPin={pin.id === newPinId}
                     />
                   ))}

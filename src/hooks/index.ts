@@ -48,7 +48,7 @@ export function useGeocoding() {
         {
           method: 'GET',
           headers: {
-            'User-Agent': 'MapPinBoard/1.0',
+            'Accept': 'application/json',
           },
         }
       );

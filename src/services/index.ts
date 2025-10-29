@@ -36,7 +36,6 @@ export class GeocodingService {
         {
           method: 'GET',
           headers: {
-            'User-Agent': 'MapPinBoard/1.0',
             'Accept': 'application/json',
           },
           signal: controller.signal,

@@ -9,6 +9,7 @@ import { Pin } from '@/types';
 // Removed AnimatedPinMarker import
 import { AnimatedPinListItem } from '@/components/AnimatedPinListItem';
 import { LoadingShimmer } from '@/components/LoadingShimmer';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import 'leaflet/dist/leaflet.css';
 import mapPinSvg from '@/assets/images/MapPin.svg?raw';
 
@@ -72,7 +73,7 @@ const EmptyState: React.FC<{ title?: string; description?: string }> = ({
       
       {/* Title */}
       <motion.h3 
-        className="text-lg font-medium text-gray-900 mb-2" 
+        className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2" 
         style={{ height: '22px' }}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -83,7 +84,7 @@ const EmptyState: React.FC<{ title?: string; description?: string }> = ({
       
       {/* Description */}
       <motion.p 
-        className="text-sm text-gray-500 text-center" 
+        className="text-sm text-gray-500 dark:text-gray-400 text-center" 
         style={{ height: '17px' }}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -160,7 +161,7 @@ const MapTooltipController: React.FC<{
 const PinTooltip: React.FC<{ pin: Pin; position: { x: number; y: number } }> = ({ pin, position }) => {
   return (
     <motion.div
-      className="absolute z-50 flex flex-col items-start p-2 gap-1 w-[186px] h-[66px] bg-white rounded-lg shadow-md"
+      className="absolute z-50 flex flex-col items-start p-2 gap-1 w-[186px] h-[66px] bg-white dark:bg-gray-800 rounded-lg shadow-md"
       style={{
         left: position.x,
         top: position.y,
@@ -171,10 +172,10 @@ const PinTooltip: React.FC<{ pin: Pin; position: { x: number; y: number } }> = (
       exit={{ opacity: 0, scale: 0.9, y: 10 }}
       transition={{ duration: 0.15 }}
     >
-      <p className="text-sm font-medium text-gray-900 truncate w-full">
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate w-full">
         {pin.address || 'Loading address...'}
       </p>
-      <p className="text-xs text-gray-500 truncate w-full">
+      <p className="text-xs text-gray-500 dark:text-gray-400 truncate w-full">
         {pin.address === 'Loading address...' ? (
           <LoadingShimmer width="120px" height="12px" />
         ) : (
@@ -193,6 +194,7 @@ export const MapPage: React.FC = () => {
     updatePin,
     selectPin,
     clearAllPins,
+    logout,
   } = useAppStore();
   
   const pins = map.pins;
@@ -308,10 +310,10 @@ export const MapPage: React.FC = () => {
             >
               <Popup>
                 <div className="p-2">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
                     {pin.address || 'Loading address...'}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}
                   </p>
                 </div>
@@ -323,16 +325,32 @@ export const MapPage: React.FC = () => {
 
         {/* Top Header Bar */}
         <motion.div 
-          className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 flex items-center justify-center py-3"
+          className="absolute top-0 left-0 right-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between py-3 px-6"
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
+          <ThemeToggle />
           <div className="flex items-center gap-2">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 5L9 2L15 5L21.303 2.2987C21.5569 2.18992 21.8508 2.30749 21.9596 2.56131C21.9862 2.62355 22 2.69056 22 2.75827V19L15 22L9 19L2.69696 21.7013C2.44314 21.8101 2.14921 21.6925 2.04043 21.4387C2.01375 21.3765 2 21.3094 2 21.2417V5ZM16 19.3955L20 17.6812V5.03308L16 6.74736V19.3955ZM14 19.2639V6.73607L10 4.73607V17.2639L14 19.2639ZM8 17.2526V4.60451L4 6.31879V18.9669L8 17.2526Z" fill="#202020"/>
+              <path d="M2 5L9 2L15 5L21.303 2.2987C21.5569 2.18992 21.8508 2.30749 21.9596 2.56131C21.9862 2.62355 22 2.69056 22 2.75827V19L15 22L9 19L2.69696 21.7013C2.44314 21.8101 2.14921 21.6925 2.04043 21.4387C2.01375 21.3765 2 21.3094 2 21.2417V5ZM16 19.3955L20 17.6812V5.03308L16 6.74736V19.3955ZM14 19.2639V6.73607L10 4.73607V17.2639L14 19.2639ZM8 17.2526V4.60451L4 6.31879V18.9669L8 17.2526Z" fill="currentColor" className="text-gray-900 dark:text-gray-100"/>
             </svg>
-            <h1 className="text-2xl font-bold text-gray-900">Map Pinboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Map Pinboard</h1>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <motion.button
+              onClick={logout}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.1 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
+              </svg>
+              Logout
+            </motion.button>
           </div>
         </motion.div>
 
@@ -343,16 +361,16 @@ export const MapPage: React.FC = () => {
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-            <div className="h-full flex flex-col bg-white rounded-lg">
-            <div className="h-15 border-b border-gray-300 pt-5 pb-3 px-4">
+            <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-lg">
+            <div className="h-15 border-b border-gray-300 dark:border-gray-600 pt-5 pb-3 px-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Pin Lists ({pins.length})
                 </h3>
                 {pins.length > 0 && (
                   <motion.button
                     onClick={clearAllPins}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     title="Clear all pins"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

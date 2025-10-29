@@ -1,5 +1,5 @@
 // Login page component
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { ValidationService } from '@/services';
@@ -7,7 +7,7 @@ import backgroundImage from '@/assets/images/BG-Image.jpg';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { auth, login } = useAppStore();
+  const { login } = useAppStore();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -95,16 +95,16 @@ export const LoginPage = () => {
 
   return (
     <div 
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 dark:bg-gray-900"
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
       {/* Background overlay */}
-      <div className="absolute inset-0 bg-black bg-opacity-50" />
+      <div className="absolute inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70" />
       
       {/* Login Dialog */}
-      <div className="relative z-10 w-full max-w-[400px]">
+      <div className="relative z-10 w-full max-w-[400px] sm:max-w-[400px]">
         <div 
-          className={`bg-white rounded-2xl shadow-2xl w-[400px] pt-12 pb-12 px-10 flex flex-col justify-between transition-all duration-300 ${
+          className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[366px] sm:w-[400px] pt-12 pb-12 px-10 flex flex-col justify-between transition-all duration-300 ${
             formErrors.email || formErrors.password ? 'h-[542px]' : 'h-[494px]'
           }`}
         >
@@ -124,10 +124,10 @@ export const LoginPage = () => {
               
               {/* Header */}
               <div className="text-center">
-                <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   Account Login
                 </h1>
-                <p className="text-gray-500" style={{ fontSize: '16px' }}>
+                <p className="text-gray-500 dark:text-gray-400" style={{ fontSize: '16px' }}>
                   Please enter your details to log in.
                 </p>
               </div>
@@ -136,7 +136,7 @@ export const LoginPage = () => {
               <div>
                 <div className="space-y-1 mb-4">
                   <div className="flex items-center space-x-1">
-                    <label className="text-sm font-medium text-gray-900">
+                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Email
                     </label>
                     <span className="text-red-500 text-sm">*</span>
@@ -149,10 +149,10 @@ export const LoginPage = () => {
                       onChange={handleInputChange}
                       placeholder="Enter your email"
                       autoComplete="email"
-                      className={`w-full h-[38px] px-3 py-2.5 border rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
+                      className={`w-full h-[38px] px-3 py-2.5 border rounded-md text-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
                         formErrors.email
-                          ? 'border-red-300 focus:ring-red-500'
-                          : 'border-gray-300'
+                          ? 'border-red-300 dark:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 dark:border-gray-600'
                       }`}
                       required
                     />
@@ -165,7 +165,7 @@ export const LoginPage = () => {
                 {/* Password Field */}
                 <div className="space-y-1">
                   <div className="flex items-center space-x-1">
-                    <label className="text-sm font-medium text-gray-900">
+                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Password
                     </label>
                     <span className="text-red-500 text-sm">*</span>
@@ -178,10 +178,10 @@ export const LoginPage = () => {
                       onChange={handleInputChange}
                       placeholder="Enter your password"
                       autoComplete="current-password"
-                      className={`w-full h-[38px] px-3 py-2.5 border rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
+                      className={`w-full h-[38px] px-3 py-2.5 border rounded-md text-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
                         formErrors.password
-                          ? 'border-red-300 focus:ring-red-500'
-                          : 'border-gray-300'
+                          ? 'border-red-300 dark:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 dark:border-gray-600'
                       }`}
                       required
                     />

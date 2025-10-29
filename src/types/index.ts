@@ -30,6 +30,10 @@ export interface AuthState {
   error: string | null;
 }
 
+export interface ThemeState {
+  isDark: boolean;
+}
+
 export interface GeocodingResponse {
   display_name: string;
   lat: string;

@@ -1,11 +1,12 @@
 // React Context store for global state management
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Pin, User, MapState, AuthState } from '@/types';
+import { Pin, User, MapState, AuthState, ThemeState } from '@/types';
 import { generateId } from '@/utils';
 
 // localStorage keys for persisting data
 const MAP_STORAGE_KEY = 'wobi:map';
 const AUTH_STORAGE_KEY = 'wobi:auth';
+const THEME_STORAGE_KEY = 'wobi:theme';
 
 // Helper functions for localStorage
 const saveMapToStorage = (map: MapState) => {
@@ -53,12 +54,33 @@ const loadAuthFromStorage = (): Partial<AuthState> => {
   }
 };
 
+const saveThemeToStorage = (theme: ThemeState) => {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(theme));
+  } catch (error) {
+    console.error('Failed to save theme to localStorage:', error);
+  }
+};
+
+const loadThemeFromStorage = (): Partial<ThemeState> => {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (error) {
+    console.error('Failed to load theme from localStorage:', error);
+    return {};
+  }
+};
+
 interface AppState {
   // Map state
   map: MapState;
   
   // Auth state
   auth: AuthState;
+  
+  // Theme state
+  theme: ThemeState;
   
   // Actions
   setMapCenter: (center: [number, number]) => void;
@@ -76,6 +98,9 @@ interface AppState {
   logout: () => void;
   setAuthLoading: (loading: boolean) => void;
   setAuthError: (error: string | null) => void;
+  
+  // Theme actions
+  toggleTheme: () => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -109,6 +134,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     };
   });
 
+  // Theme state
+  const [theme, setTheme] = useState<ThemeState>(() => {
+    const storedTheme = loadThemeFromStorage();
+    return {
+      isDark: storedTheme.isDark || false,
+    };
+  });
+
   // Save map state to localStorage whenever it changes
   useEffect(() => {
     saveMapToStorage(map);
@@ -118,6 +151,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   useEffect(() => {
     saveAuthToStorage(auth);
   }, [auth]);
+
+  // Save theme state to localStorage whenever it changes
+  useEffect(() => {
+    saveThemeToStorage(theme);
+  }, [theme]);
+
+  // Apply theme to document
+  useEffect(() => {
+    if (theme.isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme.isDark]);
 
   // Map actions
   const setMapCenter = useCallback((center: [number, number]) => {
@@ -246,9 +293,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setAuth(prev => ({ ...prev, error }));
   }, []);
 
+  // Theme actions
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => ({ ...prev, isDark: !prev.isDark }));
+  }, []);
+
   const value: AppState = {
     map,
     auth,
+    theme,
     setMapCenter,
     setMapZoom,
     addPin,
@@ -262,6 +315,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     logout,
     setAuthLoading,
     setAuthError,
+    toggleTheme,
   };
 
   return (

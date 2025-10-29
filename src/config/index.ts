@@ -11,8 +11,8 @@ export const APP_CONFIG = {
     timeout: 5000,
   },
   storage: {
-    pinsKey: 'map-pin-board-pins',
-    userKey: 'map-pin-board-user',
+    pinsKey: 'wobi:pins',
+    userKey: 'wobi:user',
   },
   breakpoints: {
     mobile: 640,
@@ -28,9 +28,9 @@ export const API_ENDPOINTS = {
 
 // Local storage keys
 export const STORAGE_KEYS = {
-  pins: 'map-pin-board-pins',
-  user: 'map-pin-board-user',
-  settings: 'map-pin-board-settings',
+  pins: 'wobi:pins',
+  user: 'wobi:user',
+  settings: 'wobi:settings',
 } as const;
 
 // Error messages

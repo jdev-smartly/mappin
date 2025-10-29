@@ -49,25 +49,18 @@ export const LoginPage = () => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('Form submitted with:', formData); // Debug log
-    
     if (!validateForm()) {
-      console.log('Form validation failed'); // Debug log
       return;
     }
 
     setIsLoading(true);
-    console.log('Calling login function...'); // Debug log
     
     try {
       const result = await login(formData.email, formData.password);
-      console.log('Login result:', result); // Debug log
       
       if (result.success) {
-        console.log('Login successful, navigating...'); // Debug log
         navigate('/map');
       } else {
-        console.log('Login failed, setting errors...'); // Debug log
         // Handle login failure with specific error messages
         const errors: typeof formErrors = {};
         
@@ -78,15 +71,9 @@ export const LoginPage = () => {
         if (formData.password !== 'password123') {
           errors.password = 'Incorrect password, please try again';
         }
-        
-        console.log('Setting errors:', errors); // Debug log
-        
+
         // Use functional update to ensure state is properly set
-        setFormErrors(prevErrors => {
-          console.log('Previous errors:', prevErrors);
-          console.log('New errors:', errors);
-          return errors;
-        });
+        setFormErrors(() => errors);
       }
     } finally {
       setIsLoading(false);

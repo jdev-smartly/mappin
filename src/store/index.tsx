@@ -235,7 +235,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Auth actions
   const login = useCallback(async (email: string, password: string) => {
-    
+    setAuth(prev => ({
+      ...prev,
+      isLoading: true,
+      error: null,
+    }));
+
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -258,6 +263,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         
         return { success: true, user };
       } else {
+        setAuth(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Invalid credentials',
+        }));
         // Invalid credentials - don't update auth state to prevent remounting
         return { success: false };
       }
@@ -271,6 +281,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       }));
       
       return { success: false };
+    }
+    finally {
+      setAuth(prev => ({
+        ...prev,
+        isLoading: false,
+      }));
     }
   }, []);
 

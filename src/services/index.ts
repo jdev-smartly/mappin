@@ -138,7 +138,7 @@ export class StorageService {
   clear(): boolean {
     try {
       const keys = Object.keys(localStorage).filter(key => 
-        key.startsWith('map-pin-board-')
+        key.startsWith('wobi:')
       );
       keys.forEach(key => localStorage.removeItem(key));
       return true;

@@ -2,6 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { MapContainer, TileLayer, useMapEvents, useMap, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
+import type { DragEndEvent } from 'leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store';
 import { geocodingService } from '@/services';
@@ -241,6 +242,7 @@ export const MapPage: React.FC = () => {
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
   const [newPinId, setNewPinId] = useState<string | null>(null);
   const [isSelectedFromList, setIsSelectedFromList] = useState(false);
+  const pinIcon = React.useMemo(createPinIcon, []);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (isAddingPin) return;
@@ -379,8 +381,8 @@ export const MapPage: React.FC = () => {
   }, [viewport, dragOffset]);
 
   // Handle pin drag end
-  const handlePinDragEnd = useCallback(async (pinId: string, e: any) => {
-    const { lat, lng } = e.target.getLatLng();
+  const handlePinDragEnd = useCallback(async (pinId: string, event: DragEndEvent) => {
+    const { lat, lng } = event.target.getLatLng();
     
     // Update pin coordinates immediately
     updatePin(pinId, { 
@@ -425,7 +427,7 @@ export const MapPage: React.FC = () => {
             <Marker
               key={pin.id}
               position={[pin.latitude, pin.longitude]}
-              icon={createPinIcon()}
+              icon={pinIcon}
               draggable={true}
               opacity={(() => {
                 const opacity = selectedPin && isSelectedFromList ? (selectedPin.id === pin.id ? 1 : 0.3) : 1;

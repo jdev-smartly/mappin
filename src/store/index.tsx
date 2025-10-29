@@ -110,29 +110,33 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   // Auth actions
-  const login = useCallback(async (email: string, _password: string) => {
-    setAuth(prev => ({ ...prev, isLoading: true, error: null }));
+  const login = useCallback(async (email: string, password: string) => {
     
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // For demo purposes, accept any email/password
-      const user: User = {
-        id: generateId(),
-        email,
-        name: email.split('@')[0],
-      };
-      
-      setAuth(prev => ({
-        ...prev,
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      }));
-      
-      return { success: true, user };
+      // Check credentials
+      if (email === 'test@gmail.com' && password === 'password123') {
+        const user: User = {
+          id: generateId(),
+          email,
+          name: email.split('@')[0],
+        };
+        
+        setAuth(prev => ({
+          ...prev,
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        }));
+        
+        return { success: true, user };
+      } else {
+        // Invalid credentials - don't update auth state to prevent remounting
+        return { success: false };
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       

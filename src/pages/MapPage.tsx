@@ -229,7 +229,7 @@ export const MapPage: React.FC = () => {
                         <p className="font-medium text-gray-900 text-sm truncate">
                           {pin.address || 'Loading address...'}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1 truncate">
                           {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
                         </p>
                       </div>

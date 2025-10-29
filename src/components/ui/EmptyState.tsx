@@ -10,7 +10,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description = "Your map pin list will show in here." 
 }) => {
   return (
-    <div className="w-[360px] h-auto flex flex-col items-center justify-center py-16">
+    <div className="w-full h-auto flex flex-col items-center justify-center py-16">
       {/* Magnifying glass icon */}
       <div className="mb-5">
         <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">

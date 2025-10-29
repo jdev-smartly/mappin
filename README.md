@@ -1,6 +1,6 @@
 # Map Pin Board
 
-A modern, responsive map-based application built with React, TypeScript, and TailwindCSS. Users can drop pins on an interactive map, view a dynamic list of pins with reverse-geocoded addresses, and manage their pin collection.
+A modern, responsive map-based application built with React, TypeScript, and TailwindCSS. Users can drop pins on an interactive map, view a dynamic list of pins with reverse-geocoded addresses, and manage their pin collection. :))
 
 ## Features
 
@@ -9,11 +9,10 @@ A modern, responsive map-based application built with React, TypeScript, and Tai
 - **Pin Management**: View all pins in a dynamic list with coordinates and addresses
 - **Reverse Geocoding**: Automatic address lookup using OpenStreetMap Nominatim API
 - **Pin Deletion**: Remove pins from both the map and list
-- **Responsive Design**: Optimized for desktop, mobile landscape, and mobile portrait
 
 ### Technical Features
 - **Modern Stack**: React 18 + TypeScript + Vite
-- **State Management**: Zustand with persistence
+- **State Management**: React Context + useState with persistence
 - **Styling**: TailwindCSS with custom design system
 - **Mapping**: React Leaflet with OpenStreetMap tiles
 - **Routing**: React Router with protected routes
@@ -21,7 +20,12 @@ A modern, responsive map-based application built with React, TypeScript, and Tai
 - **Local Storage**: Persistent pin data across sessions
 
 ### Bonus Features
-- **Responsive Layout**: Adaptive design for all screen sizes
+
+- **Responsive Design**: Adaptive layout that feels native on mobile, tablet, and desktop
+- **Animated UI**: Framer Motion micro-interactions for pins, lists, and controls
+- **Persistent State**: Pins and preferences survive browser refreshes via local storage
+- **Draggable Pins**: Reposition markers directly on the map with automatic reverse geocoding
+- **Vercel Ready**: Production configuration optimized for instant Vercel deployments
 - **Loading States**: Smooth loading indicators and transitions
 - **Error Handling**: Comprehensive error management
 - **Type Safety**: Full TypeScript coverage
@@ -32,7 +36,7 @@ A modern, responsive map-based application built with React, TypeScript, and Tai
 
 - **Frontend**: React 18, TypeScript, Vite
 - **Styling**: TailwindCSS, PostCSS
-- **State Management**: Zustand
+- **State Management**: React useState
 - **Routing**: React Router DOM
 - **Maps**: React Leaflet, Leaflet
 - **Icons**: Lucide React
@@ -87,7 +91,7 @@ src/
 ├── hooks/              # Custom React hooks
 ├── pages/              # Page components
 ├── services/           # API services and external integrations
-├── store/              # Zustand store for state management
+├── store/              # React context store for state management
 ├── styles/             # Global styles and TailwindCSS
 ├── types/              # TypeScript type definitions
 ├── utils/              # Utility functions
@@ -98,12 +102,12 @@ src/
 ## Architecture
 
 ### State Management
-- **Zustand Store**: Centralized state management with persistence
+- **React Context Store**: Centralized state management with persistence
 - **Local Storage**: Automatic data persistence across sessions
 - **Type Safety**: Full TypeScript coverage for all state
 
 ### Component Architecture
-- **Atomic Design**: Components organized by complexity and reusability
+- **Atomic Design**: Components organized by complexity and reusability(I prefer in big project but not used so much in this task.)
 - **Custom Hooks**: Reusable logic for geocoding, viewport detection, etc.
 - **Service Layer**: Clean separation of API calls and external integrations
 
@@ -129,34 +133,15 @@ src/
    - Output Directory: `dist`
 3. Deploy automatically on push to main branch
 
-### Netlify
-1. Connect your GitHub repository to Netlify
-2. Configure build settings:
-   - Build Command: `npm run build`
-   - Publish Directory: `dist`
-3. Deploy automatically on push to main branch
-
 ## Demo Credentials
 
 For the demo authentication:
-- **Email**: Any valid email format
-- **Password**: Any password (6+ characters)
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'feat: add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- **Email**: test@gmail.com
+- **Password**: password123
 
 ## Acknowledgments
 
 - OpenStreetMap contributors for map data
 - React Leaflet for map integration
 - TailwindCSS for styling framework
-- Zustand for state management
+- React useState for state management

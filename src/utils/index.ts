@@ -1,6 +1,9 @@
 // Utility functions for the application
 import { clsx, type ClassValue } from 'clsx';
 
+// Export motion utilities
+export * from './motion';
+
 /**
  * Combines class names using clsx
  */

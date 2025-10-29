@@ -2,6 +2,11 @@
 import React from 'react';
 import { cn } from '@/utils';
 
+// Export animated components
+export { AnimatedPinMarker } from '../AnimatedPinMarker';
+export { AnimatedPinListItem } from '../AnimatedPinListItem';
+export { LoadingShimmer, AddressShimmer, CoordinatesShimmer, PinListShimmer } from '../LoadingShimmer';
+
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';

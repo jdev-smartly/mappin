@@ -1,79 +1,36 @@
 // Map page component
 import React, { useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents, useMap, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store';
 import { useGeocoding } from '@/hooks';
 import { Pin } from '@/types';
-import { formatDate } from '@/utils';
+// Removed AnimatedPinMarker import
+import { AnimatedPinListItem } from '@/components/AnimatedPinListItem';
+import { LoadingShimmer } from '@/components/LoadingShimmer';
 import 'leaflet/dist/leaflet.css';
+import mapPinSvg from '@/assets/images/MapPin.svg?raw';
 
-// Fix for default markers in react-leaflet
-delete (Icon.Default.prototype as any)._getIconUrl;
-Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Create Leaflet icon from MapPin.svg (sanitize filters/clip-paths for data URL safety)
+const createPinIcon = () => {
+  const sanitizeSvg = (raw: string) => {
+    return raw
+      .replace(/<defs[\s\S]*?<\/defs>/g, '')
+      .replace(/\sfilter="url\([^)]*\)"/g, '')
+      .replace(/\sclip-path="url\([^)]*\)"/g, '');
+  };
 
-// Convert decimal degrees to DMS format
-const toDMS = (decimal: number, isLatitude: boolean): string => {
-  const absolute = Math.abs(decimal);
-  const degrees = Math.floor(absolute);
-  const minutesFloat = (absolute - degrees) * 60;
-  const minutes = Math.floor(minutesFloat);
-  const seconds = (minutesFloat - minutes) * 60;
-  
-  const direction = isLatitude 
-    ? (decimal >= 0 ? 'N' : 'S')
-    : (decimal >= 0 ? 'E' : 'W');
-  
-  return `${degrees}°${minutes}'${seconds.toFixed(1)}"${direction}`;
-};
+  const cleanedSvg = sanitizeSvg(mapPinSvg);
+  const svgDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(cleanedSvg)}`;
 
-// Create custom icon for Leaflet (singleton)
-const customIcon = (() => {
-  const svgString = `
-    <svg width="30" height="44" viewBox="0 0 30 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g filter="url(#filter0_dd_11_1957)">
-        <path d="M3 14C3 7.37258 8.37258 2 15 2C21.6274 2 27 7.37258 27 14C27 20.6274 21.6274 26 15 26C8.37258 26 3 20.6274 3 14Z" fill="#202020"/>
-        <g clip-path="url(#clip0_11_1957)">
-          <path d="M18.9775 17.3525L15 21.3299L11.0225 17.3525C8.82582 15.1558 8.82582 11.5942 11.0225 9.39753C13.2192 7.20082 16.7808 7.20082 18.9775 9.39753C21.1742 11.5942 21.1742 15.1558 18.9775 17.3525ZM15 15.875C16.3807 15.875 17.5 14.7557 17.5 13.375C17.5 11.9943 16.3807 10.875 15 10.875C13.6193 10.875 12.5 11.9943 12.5 13.375C12.5 14.7557 13.6193 15.875 15 15.875ZM15 14.625C14.3096 14.625 13.75 14.0654 13.75 13.375C13.75 12.6846 14.3096 12.125 15 12.125C15.6904 12.125 16.25 12.6846 16.25 13.375C16.25 14.0654 15.6904 14.625 15 14.625Z" fill="white"/>
-        </g>
-        <path d="M13.5 38C13.5 38.8284 14.1716 39.5 15 39.5C15.8284 39.5 16.5 38.8284 16.5 38H13.5ZM15 26H13.5V38H15H16.5V26H15Z" fill="#202020"/>
-      </g>
-      <defs>
-        <filter id="filter0_dd_11_1957" x="0" y="0" width="30" height="43.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-          <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-          <feOffset dy="1"/>
-          <feGaussianBlur stdDeviation="1.5"/>
-          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
-          <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_11_1957"/>
-          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-          <feOffset dy="1"/>
-          <feGaussianBlur stdDeviation="1"/>
-          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0"/>
-          <feBlend mode="normal" in2="effect1_dropShadow_11_1957" result="effect2_dropShadow_11_1957"/>
-          <feBlend mode="normal" in="SourceGraphic" in2="effect2_dropShadow_11_1957" result="shape"/>
-        </filter>
-        <clipPath id="clip0_11_1957">
-          <rect width="15" height="15" fill="white" transform="translate(7.5 6.5)"/>
-        </clipPath>
-      </defs>
-    </svg>
-  `;
-  
-  const svgBlob = new Blob([svgString], { type: 'image/svg+xml' });
-  const svgUrl = URL.createObjectURL(svgBlob);
-  
   return new Icon({
-    iconUrl: svgUrl,
+    iconUrl: svgDataUrl,
     iconSize: [30, 44],
     iconAnchor: [15, 44],
     popupAnchor: [0, -44],
   });
-})();
+};
 
 interface MapEventsProps {
   onMapClick: (lat: number, lng: number) => void;
@@ -95,24 +52,46 @@ const EmptyState: React.FC<{ title?: string; description?: string }> = ({
   description = "Your map pin list will show in here." 
 }) => {
   return (
-    <div className="w-full h-auto flex flex-col items-center justify-center py-16">
+    <motion.div 
+      className="w-full h-auto flex flex-col items-center justify-center py-16"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Magnifying glass icon */}
-      <div className="mb-5">
+      <motion.div 
+        className="mb-5"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
         <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z" fill="#89898A"/>
         </svg>
-      </div>
+      </motion.div>
       
       {/* Title */}
-      <h3 className="text-lg font-medium text-gray-900 mb-2" style={{ height: '22px' }}>
+      <motion.h3 
+        className="text-lg font-medium text-gray-900 mb-2" 
+        style={{ height: '22px' }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
+      >
         {title}
-      </h3>
+      </motion.h3>
       
       {/* Description */}
-      <p className="text-sm text-gray-500 text-center" style={{ height: '17px' }}>
+      <motion.p 
+        className="text-sm text-gray-500 text-center" 
+        style={{ height: '17px' }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.3 }}
+      >
         {description}
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   );
 };
 
@@ -180,21 +159,29 @@ const MapTooltipController: React.FC<{
 // Tooltip component for showing pin details on hover
 const PinTooltip: React.FC<{ pin: Pin; position: { x: number; y: number } }> = ({ pin, position }) => {
   return (
-    <div
+    <motion.div
       className="absolute z-50 flex flex-col items-start p-2 gap-1 w-[186px] h-[66px] bg-white rounded-lg shadow-md"
       style={{
         left: position.x,
         top: position.y,
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.06), 0px 4px 6px rgba(0, 0, 0, 0.1)',
       }}
+      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+      transition={{ duration: 0.15 }}
     >
       <p className="text-sm font-medium text-gray-900 truncate w-full">
         {pin.address || 'Loading address...'}
       </p>
       <p className="text-xs text-gray-500 truncate w-full">
-        {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
+        {pin.address === 'Loading address...' ? (
+          <LoadingShimmer width="120px" height="12px" />
+        ) : (
+          `${pin.latitude.toFixed(4)}, ${pin.longitude.toFixed(4)}`
+        )}
       </p>
-    </div>
+    </motion.div>
   );
 };
 
@@ -214,6 +201,7 @@ export const MapPage: React.FC = () => {
   const [isAddingPin, setIsAddingPin] = useState(false);
   const [hoveredPin, setHoveredPin] = useState<Pin | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  const [newPinId, setNewPinId] = useState<string | null>(null);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (isAddingPin) return;
@@ -223,6 +211,7 @@ export const MapPage: React.FC = () => {
     try {
       // Generate ID beforehand
       const pinId = Date.now().toString();
+      setNewPinId(pinId);
       
       // Add pin immediately with coordinates
       const pinData = {
@@ -246,6 +235,8 @@ export const MapPage: React.FC = () => {
       console.error('Error adding pin:', error);
     } finally {
       setIsAddingPin(false);
+      // Clear new pin flag after animation completes
+      setTimeout(() => setNewPinId(null), 300);
     }
   }, [addPin, updatePin, isAddingPin, reverseGeocode]);
 
@@ -304,27 +295,24 @@ export const MapPage: React.FC = () => {
             onPositionUpdate={handleTooltipPositionUpdate} 
           />
           
-                  {pins.map((pin: Pin) => (
-                    <Marker
-                      key={pin.id}
-                      position={[pin.latitude, pin.longitude]}
-                      icon={customIcon}
-                      draggable={true}
-                      eventHandlers={{
-                        click: () => selectPin(pin),
-                        dragend: (e) => handlePinDragEnd(pin.id, e),
-                      }}
-                    >
+          {pins.map((pin: Pin) => (
+            <Marker
+              key={pin.id}
+              position={[pin.latitude, pin.longitude]}
+              icon={createPinIcon()}
+              draggable={true}
+              eventHandlers={{
+                click: () => selectPin(pin),
+                dragend: (e) => handlePinDragEnd(pin.id, e),
+              }}
+            >
               <Popup>
                 <div className="p-2">
                   <p className="font-medium text-gray-900">
                     {pin.address || 'Loading address...'}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Added: {formatDate(new Date(pin.createdAt))}
+                    {pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}
                   </p>
                 </div>
               </Popup>
@@ -334,17 +322,27 @@ export const MapPage: React.FC = () => {
       </div>
 
         {/* Top Header Bar */}
-        <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 flex items-center justify-center py-3">
+        <motion.div 
+          className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 flex items-center justify-center py-3"
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
           <div className="flex items-center gap-2">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 5L9 2L15 5L21.303 2.2987C21.5569 2.18992 21.8508 2.30749 21.9596 2.56131C21.9862 2.62355 22 2.69056 22 2.75827V19L15 22L9 19L2.69696 21.7013C2.44314 21.8101 2.14921 21.6925 2.04043 21.4387C2.01375 21.3765 2 21.3094 2 21.2417V5ZM16 19.3955L20 17.6812V5.03308L16 6.74736V19.3955ZM14 19.2639V6.73607L10 4.73607V17.2639L14 19.2639ZM8 17.2526V4.60451L4 6.31879V18.9669L8 17.2526Z" fill="#202020"/>
             </svg>
             <h1 className="text-2xl font-bold text-gray-900">Map Pinboard</h1>
           </div>
-        </div>
+        </motion.div>
 
       {/* Left Sidebar Overlay */}
-      <div className="absolute top-24 left-6 bottom-6 z-20 w-80">
+      <motion.div 
+        className="absolute top-24 left-6 bottom-6 z-20 w-80"
+        initial={{ x: -320, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
             <div className="h-full flex flex-col bg-white rounded-lg">
             <div className="h-15 border-b border-gray-300 pt-5 pb-3 px-4">
               <div className="flex items-center justify-between">
@@ -352,13 +350,16 @@ export const MapPage: React.FC = () => {
                   Pin Lists ({pins.length})
                 </h3>
                 {pins.length > 0 && (
-                  <button
+                  <motion.button
                     onClick={clearAllPins}
                     className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
                     title="Clear all pins"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ duration: 0.1 }}
                   >
                     Clear All
-                  </button>
+                  </motion.button>
                 )}
               </div>
             </div>
@@ -369,53 +370,33 @@ export const MapPage: React.FC = () => {
                   description="Your map pin list will show in here."
                 />
               ) : (
-                <div>
+                <>
                   {pins.map((pin: Pin, index: number) => (
-                    <div
+                    <AnimatedPinListItem
                       key={pin.id}
-                      className="h-[86px] flex items-center gap-3 hover:bg-gray-50 transition-colors p-3 border-b border-gray-100"
-                      onMouseEnter={() => setHoveredPin(pin)}
+                      pin={pin}
+                      index={index}
+                      onRemove={handleRemovePin}
+                      onMouseEnter={setHoveredPin}
                       onMouseLeave={() => setHoveredPin(null)}
-                    >
-                      {/* Avatar */}
-                      <div className="w-[38px] h-[38px] border rounded-full flex-none flex items-center justify-center bg-[#E9E9EB]/60">
-                        <span className="text-sm font-medium text-blue-500">{index + 1}</span>
-                      </div>
-                      
-                      {/* Middle Content */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm truncate">
-                          {pin.address || 'Loading address...'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1 truncate">
-                          {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
-                        </p>
-                      </div>
-                      
-                      {/* Icon Button */}
-                      <button
-                        onClick={() => handleRemovePin(pin.id)}
-                        className="w-[40px] h-[40px] bg-white border border-[#D8D8DA] rounded-full flex items-center justify-center flex-none hover:bg-gray-50 transition-colors"
-                      >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z" fill="#F73B3B"/>
-                        </svg>
-                      </button>
-                    </div>
+                      isNewPin={pin.id === newPinId}
+                    />
                   ))}
-                </div>
+                </>
               )}
             </div>
           </div>
-      </div>
+      </motion.div>
 
       {/* Tooltip */}
-      {hoveredPin && tooltipPosition && (
-        <PinTooltip 
-          pin={hoveredPin} 
-          position={tooltipPosition} 
-        />
-      )}
+      <AnimatePresence>
+        {hoveredPin && tooltipPosition && (
+          <PinTooltip 
+            pin={hoveredPin} 
+            position={tooltipPosition} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

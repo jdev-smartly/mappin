@@ -73,7 +73,7 @@ export const LoginPage = () => {
         }
 
         // Use functional update to ensure state is properly set
-        setFormErrors(() => errors);
+        setFormErrors(errors);
       }
     } finally {
       setIsLoading(false);

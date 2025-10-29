@@ -102,7 +102,7 @@ export const LoginPage = () => {
       <div className="absolute inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70" />
       
       {/* Login Dialog */}
-      <div className="relative z-10 w-full max-w-[400px] sm:max-w-[400px]">
+      <div className="relative z-10 flex justify-center">
         <div 
           className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[366px] sm:w-[400px] pt-12 pb-12 px-10 flex flex-col justify-between transition-all duration-300 ${
             formErrors.email || formErrors.password ? 'h-[542px]' : 'h-[494px]'

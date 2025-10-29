@@ -108,8 +108,8 @@ export function usePins() {
     const newPin: Pin = {
       ...pin,
       id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     
     setPins(prev => [...prev, newPin]);
@@ -126,7 +126,7 @@ export function usePins() {
   const updatePin = useCallback((id: string, updates: Partial<Pin>) => {
     setPins(prev => prev.map(pin => 
       pin.id === id 
-        ? { ...pin, ...updates, updatedAt: new Date() }
+        ? { ...pin, ...updates, updatedAt: new Date().toISOString() }
         : pin
     ));
   }, [setPins]);

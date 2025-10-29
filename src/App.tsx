@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
 import { MapPage } from '@/pages/MapPage';
-import { useAppStore } from '@/store';
+import { AppProvider, useAppStore } from '@/store';
 import { LoadingSpinner } from '@/components/ui';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -26,7 +26,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const { auth } = useAppStore();
 
   // Show loading spinner while checking authentication
@@ -82,5 +82,13 @@ export const App: React.FC = () => {
         </Routes>
       </div>
     </Router>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
   );
 };

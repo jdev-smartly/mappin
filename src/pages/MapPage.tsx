@@ -103,7 +103,7 @@ const MapTooltipController: React.FC<{
 }> = ({ hoveredPin, onPositionUpdate }) => {
   const map = useMap();
   
-  React.useEffect(() => {
+  const updateTooltipPosition = React.useCallback(() => {
     if (hoveredPin && map) {
       const point = map.latLngToContainerPoint([hoveredPin.latitude, hoveredPin.longitude]);
       const mapContainer = map.getContainer();
@@ -153,6 +153,27 @@ const MapTooltipController: React.FC<{
       onPositionUpdate(null);
     }
   }, [hoveredPin, map, onPositionUpdate]);
+  
+  React.useEffect(() => {
+    updateTooltipPosition();
+  }, [updateTooltipPosition]);
+  
+  React.useEffect(() => {
+    if (hoveredPin && map) {
+      // Add event listeners for map movement and zoom
+      const handleMapMove = () => updateTooltipPosition();
+      
+      map.on('move', handleMapMove);
+      map.on('zoom', handleMapMove);
+      map.on('resize', handleMapMove);
+      
+      return () => {
+        map.off('move', handleMapMove);
+        map.off('zoom', handleMapMove);
+        map.off('resize', handleMapMove);
+      };
+    }
+  }, [hoveredPin, map, updateTooltipPosition]);
   
   return null;
 };
@@ -211,7 +232,17 @@ export const MapPage: React.FC = () => {
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (isAddingPin) return;
     
+    // If a pin is selected from list, clear selection instead of adding new pin
+    if (selectedPin && isSelectedFromList) {
+      selectPin(null);
+      setIsSelectedFromList(false);
+      setHoveredPin(null);
+      setTooltipPosition(null);
+      return;
+    }
+    
     setIsAddingPin(true);
+    setIsSelectedFromList(false); // Reset selection state when adding new pin
     
     try {
       // Generate ID beforehand
@@ -243,15 +274,16 @@ export const MapPage: React.FC = () => {
       // Clear new pin flag after animation completes
       setTimeout(() => setNewPinId(null), 300);
     }
-  }, [addPin, updatePin, isAddingPin]);
+  }, [addPin, updatePin, isAddingPin, selectedPin, isSelectedFromList, selectPin]);
 
   const handleRemovePin = useCallback((pinId: string) => {
-    // Clear hovered pin if it's the one being removed
-    if (hoveredPin && hoveredPin.id === pinId) {
-      setHoveredPin(null);
-    }
+    // Always clear tooltip when deleting any pin
+    setHoveredPin(null);
+    setTooltipPosition(null);
+    
     removePin(pinId);
-  }, [removePin, hoveredPin]);
+    
+  }, [removePin]);
 
   const handleTooltipPositionUpdate = useCallback((position: { x: number; y: number } | null) => {
     setTooltipPosition(position);
@@ -311,7 +343,10 @@ export const MapPage: React.FC = () => {
               position={[pin.latitude, pin.longitude]}
               icon={createPinIcon()}
               draggable={true}
-              opacity={selectedPin && isSelectedFromList ? (selectedPin.id === pin.id ? 1 : 0.3) : 1}
+              opacity={(() => {
+                const opacity = selectedPin && isSelectedFromList ? (selectedPin.id === pin.id ? 1 : 0.3) : 1;
+                return opacity;
+              })()}
               eventHandlers={{
                 click: () => {
                   selectPin(pin);

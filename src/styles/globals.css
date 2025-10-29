@@ -52,3 +52,22 @@
     display: none;
   }
 }
+
+/* Leaflet popup theming */
+:root .leaflet-popup-content-wrapper,
+:root .leaflet-popup-tip {
+  background-color: #ffffff;
+  color: #111827; /* gray-900 */
+}
+
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background-color: #1f2937; /* gray-800 */
+  color: #f3f4f6; /* gray-100 */
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.25);
+}
+
+/* Optional: adjust popup content spacing to match design */
+.leaflet-popup-content {
+  margin: 12px 14px;
+}

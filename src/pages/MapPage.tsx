@@ -5,6 +5,7 @@ import { Icon } from 'leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store';
 import { geocodingService } from '@/services';
+import { useViewport } from '@/hooks';
 import { Pin } from '@/types';
 // Removed AnimatedPinMarker import
 import { AnimatedPinListItem } from '@/components/AnimatedPinListItem';
@@ -219,8 +220,20 @@ export const MapPage: React.FC = () => {
   } = useAppStore();
   
   const selectedPin = map.selectedPin;
-  
   const pins = map.pins;
+  const viewport = useViewport();
+  
+  // Mobile portrait drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragStartOffset, setDragStartOffset] = useState(0);
+  const [maxExpansion, setMaxExpansion] = useState(240);
+
+  const baseHeight = pins.length > 0 ? 320 : 240;
+  const topBarHeight = 46;
+  const desiredGap = 24;
+  const totalTopGap = topBarHeight + desiredGap;
 
   // Use geocoding service directly instead of hook
   const [isAddingPin, setIsAddingPin] = useState(false);
@@ -293,6 +306,77 @@ export const MapPage: React.FC = () => {
     selectPin(pin);
     setIsSelectedFromList(true);
   }, [selectPin]);
+
+  // Mobile portrait drag handlers - using global listeners for smooth dragging
+  React.useEffect(() => {
+    if (viewport !== 'mobile-portrait') {
+      setMaxExpansion(240);
+      return;
+    }
+
+    const updateExpansion = () => {
+      const available = window.innerHeight - totalTopGap - baseHeight;
+      setMaxExpansion(Math.max(0, available));
+    };
+
+    updateExpansion();
+    window.addEventListener('resize', updateExpansion);
+
+    return () => window.removeEventListener('resize', updateExpansion);
+  }, [viewport, baseHeight, totalTopGap]);
+
+  React.useEffect(() => {
+    setDragOffset(prev => Math.max(-maxExpansion, Math.min(0, prev)));
+  }, [maxExpansion]);
+
+  React.useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMoveGlobal = (e: TouchEvent | MouseEvent) => {
+      if (viewport !== 'mobile-portrait') return;
+      if ('touches' in e && e.touches.length > 0) {
+        e.preventDefault();
+      }
+      const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      const deltaY = clientY - dragStartY;
+      const rawOffset = dragStartOffset + deltaY;
+      const newOffset = Math.max(Math.min(rawOffset, 0), -maxExpansion);
+      setDragOffset(newOffset);
+    };
+
+    const handleEndGlobal = () => {
+      setIsDragging(false);
+      setDragOffset(prev => (prev < -80 ? -maxExpansion : 0));
+    };
+
+    window.addEventListener('touchmove', handleMoveGlobal, { passive: false });
+    window.addEventListener('touchend', handleEndGlobal);
+    window.addEventListener('mousemove', handleMoveGlobal);
+    window.addEventListener('mouseup', handleEndGlobal);
+
+    return () => {
+      window.removeEventListener('touchmove', handleMoveGlobal);
+      window.removeEventListener('touchend', handleEndGlobal);
+      window.removeEventListener('mousemove', handleMoveGlobal);
+      window.removeEventListener('mouseup', handleEndGlobal);
+    };
+  }, [isDragging, dragStartY, dragStartOffset, viewport, maxExpansion]);
+
+  React.useEffect(() => {
+    if (viewport !== 'mobile-portrait') {
+      setIsDragging(false);
+      setDragOffset(0);
+    }
+  }, [viewport]);
+
+  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (viewport !== 'mobile-portrait') return;
+    
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setIsDragging(true);
+    setDragStartY(clientY);
+    setDragStartOffset(dragOffset);
+  }, [viewport, dragOffset]);
 
   // Handle pin drag end
   const handlePinDragEnd = useCallback(async (pinId: string, e: any) => {
@@ -403,13 +487,38 @@ export const MapPage: React.FC = () => {
 
       {/* Left Sidebar Overlay */}
       <motion.div 
-        className="absolute left-[24px] bottom-0 z-20 w-[360px] h-[344px] lg:top-24 lg:left-6 lg:bottom-6 lg:w-80 lg:h-auto"
+        className={`absolute z-20 ${
+          viewport === 'mobile-portrait' 
+            ? 'left-0 right-0 bottom-0 w-full' 
+            : 'left-[24px] bottom-0 w-[360px] h-[344px] lg:top-24 lg:left-6 lg:bottom-6 lg:w-80 lg:h-auto'
+        }`}
+        style={viewport === 'mobile-portrait' ? {
+          height: baseHeight + Math.max(0, -dragOffset),
+          transition: isDragging ? 'none' : 'height 0.3s ease-out'
+        } : {}}
         initial={{ x: -320, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-            <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-t-[10px] rounded-b-none lg:rounded-lg">
-            <div className="h-15 border-b border-gray-300 dark:border-gray-600 pt-5 pb-3 px-4">
+            <div className={`h-full flex flex-col bg-white dark:bg-gray-800 ${
+              viewport === 'mobile-portrait' 
+                ? 'rounded-t-[16px] lg:rounded-lg' 
+                : 'rounded-t-[10px] rounded-b-none lg:rounded-lg'
+            }`}>
+            <div 
+              className={`border-b border-gray-300 dark:border-gray-600 pt-5 pb-3 px-4 ${
+                viewport === 'mobile-portrait' ? 'pt-3 cursor-grab active:cursor-grabbing select-none' : 'pt-5'
+              }`}
+              style={viewport === 'mobile-portrait' ? { touchAction: 'none' } : {}}
+              onTouchStart={viewport === 'mobile-portrait' ? handleDragStart : undefined}
+              onMouseDown={viewport === 'mobile-portrait' ? handleDragStart : undefined}
+            >
+              {/* Drag handle for mobile portrait */}
+              {viewport === 'mobile-portrait' && (
+                <div className="flex justify-center mb-2">
+                  <div className="w-8 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Pin Lists ({pins.length})

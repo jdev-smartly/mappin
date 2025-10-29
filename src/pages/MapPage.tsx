@@ -260,6 +260,27 @@ export const MapPage: React.FC = () => {
     setTooltipPosition(position);
   }, []);
 
+  // Handle pin drag end
+  const handlePinDragEnd = useCallback(async (pinId: string, e: any) => {
+    const { lat, lng } = e.target.getLatLng();
+    
+    // Update pin coordinates immediately
+    updatePin(pinId, { 
+      latitude: lat, 
+      longitude: lng, 
+      address: 'Updating address...' 
+    });
+
+    // Reverse geocode the new location
+    try {
+      const address = await reverseGeocode(lat, lng);
+      updatePin(pinId, { address: address || 'Address not found' });
+    } catch (error) {
+      console.error('Geocoding failed for dragged pin:', error);
+      updatePin(pinId, { address: 'Address not found' });
+    }
+  }, [updatePin, reverseGeocode]);
+
   return (
     <div className="h-screen w-screen relative overflow-hidden">
       {/* Full Screen Map */}
@@ -287,8 +308,10 @@ export const MapPage: React.FC = () => {
                       key={pin.id}
                       position={[pin.latitude, pin.longitude]}
                       icon={customIcon}
+                      draggable={true}
                       eventHandlers={{
                         click: () => selectPin(pin),
+                        dragend: (e) => handlePinDragEnd(pin.id, e),
                       }}
                     >
               <Popup>

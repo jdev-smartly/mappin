@@ -226,6 +226,3 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     </div>
   );
 };
-
-// Export EmptyState component
-export { EmptyState } from './EmptyState';

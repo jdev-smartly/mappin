@@ -1,8 +1,7 @@
 // Map page component
 import React, { useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
-import { EmptyState } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { useGeocoding } from '@/hooks';
 import { Pin } from '@/types';
@@ -90,6 +89,115 @@ const MapEvents: React.FC<MapEventsProps> = ({ onMapClick }) => {
   return null;
 };
 
+// Empty state component for when no pins exist
+const EmptyState: React.FC<{ title?: string; description?: string }> = ({ 
+  title = "No Result Found", 
+  description = "Your map pin list will show in here." 
+}) => {
+  return (
+    <div className="w-full h-auto flex flex-col items-center justify-center py-16">
+      {/* Magnifying glass icon */}
+      <div className="mb-5">
+        <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z" fill="#89898A"/>
+        </svg>
+      </div>
+      
+      {/* Title */}
+      <h3 className="text-lg font-medium text-gray-900 mb-2" style={{ height: '22px' }}>
+        {title}
+      </h3>
+      
+      {/* Description */}
+      <p className="text-sm text-gray-500 text-center" style={{ height: '17px' }}>
+        {description}
+      </p>
+    </div>
+  );
+};
+
+// Component to access map instance and calculate tooltip position
+const MapTooltipController: React.FC<{ 
+  hoveredPin: Pin | null; 
+  onPositionUpdate: (position: { x: number; y: number } | null) => void;
+}> = ({ hoveredPin, onPositionUpdate }) => {
+  const map = useMap();
+  
+  React.useEffect(() => {
+    if (hoveredPin && map) {
+      const point = map.latLngToContainerPoint([hoveredPin.latitude, hoveredPin.longitude]);
+      const mapContainer = map.getContainer();
+      const mapRect = mapContainer.getBoundingClientRect();
+      
+      // Tooltip dimensions
+      const tooltipWidth = 186;
+      const tooltipHeight = 66;
+      const pinSize = 44; // Height of the pin icon
+      
+      // Calculate base position (above the pin)
+      let x = mapRect.left + point.x - (tooltipWidth / 2);
+      let y = mapRect.top + point.y - tooltipHeight - pinSize - 10; // 10px gap
+      
+      // Screen boundaries
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      
+      // Adjust horizontal position if tooltip goes off-screen
+      if (x < 10) {
+        x = 10; // Keep 10px margin from left edge
+      } else if (x + tooltipWidth > screenWidth - 10) {
+        x = screenWidth - tooltipWidth - 10; // Keep 10px margin from right edge
+      }
+      
+      // Adjust vertical position if tooltip goes off-screen
+      if (y < 10) {
+        // If not enough space above, place below the pin
+        y = mapRect.top + point.y + pinSize + 10;
+        
+        // If still off-screen below, place to the side
+        if (y + tooltipHeight > screenHeight - 10) {
+          // Place to the right of the pin
+          x = mapRect.left + point.x + pinSize + 10;
+          y = mapRect.top + point.y - (tooltipHeight / 2);
+          
+          // Adjust if goes off right edge
+          if (x + tooltipWidth > screenWidth - 10) {
+            // Place to the left of the pin
+            x = mapRect.left + point.x - tooltipWidth - pinSize - 10;
+          }
+        }
+      }
+      
+      onPositionUpdate({ x, y });
+    } else {
+      onPositionUpdate(null);
+    }
+  }, [hoveredPin, map, onPositionUpdate]);
+  
+  return null;
+};
+
+// Tooltip component for showing pin details on hover
+const PinTooltip: React.FC<{ pin: Pin; position: { x: number; y: number } }> = ({ pin, position }) => {
+  return (
+    <div
+      className="absolute z-50 flex flex-col items-start p-2 gap-1 w-[186px] h-[66px] bg-white rounded-lg shadow-md"
+      style={{
+        left: position.x,
+        top: position.y,
+        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.06), 0px 4px 6px rgba(0, 0, 0, 0.1)',
+      }}
+    >
+      <p className="text-sm font-medium text-gray-900 truncate w-full">
+        {pin.address || 'Loading address...'}
+      </p>
+      <p className="text-xs text-gray-500 truncate w-full">
+        {`${toDMS(pin.latitude, true)} ${toDMS(pin.longitude, false)}`}
+      </p>
+    </div>
+  );
+};
+
 export const MapPage: React.FC = () => {
   const {
     map,
@@ -103,6 +211,8 @@ export const MapPage: React.FC = () => {
 
   const { reverseGeocode } = useGeocoding();
   const [isAddingPin, setIsAddingPin] = useState(false);
+  const [hoveredPin, setHoveredPin] = useState<Pin | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (isAddingPin) return;
@@ -139,9 +249,16 @@ export const MapPage: React.FC = () => {
   }, [addPin, updatePin, isAddingPin, reverseGeocode]);
 
   const handleRemovePin = useCallback((pinId: string) => {
+    // Clear hovered pin if it's the one being removed
+    if (hoveredPin && hoveredPin.id === pinId) {
+      setHoveredPin(null);
+    }
     removePin(pinId);
-  }, [removePin]);
+  }, [removePin, hoveredPin]);
 
+  const handleTooltipPositionUpdate = useCallback((position: { x: number; y: number } | null) => {
+    setTooltipPosition(position);
+  }, []);
 
   return (
     <div className="h-screen w-screen relative overflow-hidden">
@@ -160,6 +277,10 @@ export const MapPage: React.FC = () => {
           />
           
           <MapEvents onMapClick={handleMapClick} />
+          <MapTooltipController 
+            hoveredPin={hoveredPin} 
+            onPositionUpdate={handleTooltipPositionUpdate} 
+          />
           
                   {pins.map((pin: Pin) => (
                     <Marker
@@ -218,6 +339,8 @@ export const MapPage: React.FC = () => {
                     <div
                       key={pin.id}
                       className="h-[86px] flex items-center gap-3 hover:bg-gray-50 transition-colors p-3 border-b border-gray-100"
+                      onMouseEnter={() => setHoveredPin(pin)}
+                      onMouseLeave={() => setHoveredPin(null)}
                     >
                       {/* Avatar */}
                       <div className="w-[38px] h-[38px] border rounded-full flex-none flex items-center justify-center bg-[#E9E9EB]/60">
@@ -250,6 +373,14 @@ export const MapPage: React.FC = () => {
             </div>
           </div>
       </div>
+
+      {/* Tooltip */}
+      {hoveredPin && tooltipPosition && (
+        <PinTooltip 
+          pin={hoveredPin} 
+          position={tooltipPosition} 
+        />
+      )}
     </div>
   );
 };
